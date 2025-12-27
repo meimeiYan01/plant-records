@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多肉养殖记录</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>多肉养殖记录</h1>
+        </header>
+        
+        <main>
+            <!-- 页面头图和美化内容 -->
+            <section class="hero-section">
+                <div class="hero-content">
+                    <h2>多肉植物养护记录</h2>
+                    <p>记录每一株多肉的成长历程，让养殖更科学、更有趣</p>
+                    <button id="add-plant-btn" class="btn btn-primary btn-large">添加多肉植物</button>
+                </div>
+                <div class="hero-image" style="background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 200px; border-radius: 10px; margin: 20px 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                    <div style="text-align: center; color: white; font-size: 120px;">🌵</div>
+                </div>
+            </section>
+
+            <!-- 添加植物表单（默认隐藏） -->
+            <section class="add-plant" id="add-plant-section" style="display: none;">
+                <h2>添加多肉植物</h2>
+                <form id="plant-form">
+                    <div class="form-group">
+                        <label for="plant-name">植物名称</label>
+                        <input type="text" id="plant-name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="plant-species">品种</label>
+                        <input type="text" id="plant-species" name="species" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="plant-acquisition-date">入手日期</label>
+                        <input type="date" id="plant-acquisition-date" name="acquisitionDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="plant-location">摆放位置</label>
+                        <input type="text" id="plant-location" name="location">
+                    </div>
+                    <div class="form-group">
+                        <label for="plant-image">植物图片</label>
+                        <input type="file" id="plant-image" name="image" accept="image/*">
+                        <div id="image-preview" style="margin-top: 10px; max-width: 200px;"></div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn btn-primary">添加植物</button>
+                        <button type="button" id="cancel-add-btn" class="btn btn-secondary">取消</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="plants-list">
+                <h2>我的多肉植物</h2>
+                <div id="plants-container">
+                    <!-- 植物卡片将在这里动态生成 -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 养护记录模态框 -->
+    <div id="care-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>添加养护记录</h3>
+            <form id="care-form">
+                <input type="hidden" id="care-plant-id" name="plantId">
+                <div class="form-group">
+                    <label for="care-type">养护类型</label>
+                    <select id="care-type" name="type" required>
+                        <option value="water">浇水</option>
+                        <option value="fertilize">施肥</option>
+                        <option value="repot">换盆</option>
+                        <option value="prune">修剪</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="care-date">日期</label>
+                    <input type="date" id="care-date" name="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="care-notes">备注</label>
+                    <textarea id="care-notes" name="notes" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="care-image">养护图片</label>
+                    <input type="file" id="care-image" name="image" accept="image/*">
+                    <div id="care-image-preview" style="margin-top: 10px; max-width: 200px;"></div>
+                </div>
+                <button type="submit" class="btn btn-primary">添加记录</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 植物编辑模态框 -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>编辑植物信息</h3>
+            <form id="edit-form">
+                <input type="hidden" id="edit-plant-id" name="plantId">
+                <div class="form-group">
+                    <label for="edit-plant-name">植物名称</label>
+                    <input type="text" id="edit-plant-name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-plant-species">品种</label>
+                    <input type="text" id="edit-plant-species" name="species" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-plant-acquisition-date">入手日期</label>
+                    <input type="date" id="edit-plant-acquisition-date" name="acquisitionDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-plant-location">摆放位置</label>
+                    <input type="text" id="edit-plant-location" name="location">
+                </div>
+                <div class="form-group">
+                    <label for="edit-plant-image">植物图片</label>
+                    <input type="file" id="edit-plant-image" name="image" accept="image/*">
+                    <div id="edit-image-preview" style="margin-top: 10px; max-width: 200px;"></div>
+                    <div id="current-image" style="margin-top: 10px; max-width: 200px;"></div>
+                </div>
+                <button type="submit" class="btn btn-primary">保存修改</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 大图查看模态框 -->
+    <div id="image-modal" class="modal">
+        <div class="modal-content" style="background: rgba(0, 0, 0, 0.9); border: none; border-radius: 0; max-width: 90%; max-height: 90%; padding: 20px;">
+            <span class="close" style="color: white; font-size: 40px; position: absolute; right: 30px; top: 15px;">&times;</span>
+            <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                <img id="large-image" src="" style="max-width: 100%; max-height: 80vh; object-fit: contain;" alt="大图查看">
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
