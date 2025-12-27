@@ -5,6 +5,7 @@ class PlantStorage {
     constructor() {
         this.plants = this.loadPlants();
         this.careRecords = this.loadCareRecords();
+        this.reminders = this.loadReminders();
     }
 
     // 加载植物数据
@@ -29,6 +30,17 @@ class PlantStorage {
         localStorage.setItem('careRecords', JSON.stringify(this.careRecords));
     }
 
+    // 加载养护提醒
+    loadReminders() {
+        const reminders = localStorage.getItem('reminders');
+        return reminders ? JSON.parse(reminders) : [];
+    }
+
+    // 保存养护提醒
+    saveReminders() {
+        localStorage.setItem('reminders', JSON.stringify(this.reminders));
+    }
+
     // 添加植物
     addPlant(plant) {
         const newPlant = {
@@ -44,8 +56,10 @@ class PlantStorage {
     deletePlant(plantId) {
         this.plants = this.plants.filter(plant => plant.id !== plantId);
         this.careRecords = this.careRecords.filter(record => record.plantId !== plantId);
+        this.reminders = this.reminders.filter(reminder => reminder.plantId !== plantId);
         this.savePlants();
         this.saveCareRecords();
+        this.saveReminders();
     }
 
     // 更新植物信息
@@ -81,6 +95,71 @@ class PlantStorage {
             .filter(record => record.plantId === plantId)
             .sort((a, b) => new Date(b.date) - new Date(a.date));
     }
+
+    // 导出所有数据
+    exportAllData() {
+        return {
+            plants: this.plants,
+            careRecords: this.careRecords,
+            exportDate: new Date().toISOString(),
+            version: '1.0'
+        };
+    }
+
+    // 导入数据
+    importData(data) {
+        if (data.plants && Array.isArray(data.plants)) {
+            this.plants = data.plants;
+            this.savePlants();
+        }
+        if (data.careRecords && Array.isArray(data.careRecords)) {
+            this.careRecords = data.careRecords;
+            this.saveCareRecords();
+        }
+        if (data.reminders && Array.isArray(data.reminders)) {
+            this.reminders = data.reminders;
+            this.saveReminders();
+        }
+    }
+
+    // 添加养护提醒
+    addReminder(reminder) {
+        const newReminder = {
+            id: Date.now().toString(),
+            ...reminder
+        };
+        this.reminders.push(newReminder);
+        this.saveReminders();
+        return newReminder;
+    }
+
+    // 获取植物的养护提醒
+    getRemindersByPlantId(plantId) {
+        return this.reminders.filter(reminder => reminder.plantId === plantId);
+    }
+
+    // 获取所有到期的提醒
+    getDueReminders() {
+        const today = new Date().toISOString().split('T')[0];
+        return this.reminders.filter(reminder => reminder.nextDate <= today);
+    }
+
+    // 删除养护提醒
+    deleteReminder(reminderId) {
+        this.reminders = this.reminders.filter(reminder => reminder.id !== reminderId);
+        this.saveReminders();
+    }
+
+    // 更新提醒的下次日期
+    updateReminderNextDate(reminderId, nextDate) {
+        const reminder = this.reminders.find(r => r.id === reminderId);
+        if (reminder) {
+            reminder.nextDate = nextDate;
+            this.saveReminders();
+            return reminder;
+        }
+        return null;
+    }
 }
 
 // 应用类
@@ -95,10 +174,61 @@ class PlantApp {
         this.bindEvents();
         this.renderPlants();
         this.setDefaultDate();
+        this.checkDueReminders();
+    }
+
+    // 检查到期的提醒
+    checkDueReminders() {
+        const dueReminders = this.storage.getDueReminders();
+        if (dueReminders.length > 0) {
+            const plantNames = new Map();
+            this.storage.plants.forEach(plant => {
+                plantNames.set(plant.id, plant.name);
+            });
+
+            const reminderMessages = dueReminders.map(reminder => {
+                const plantName = plantNames.get(reminder.plantId) || '未知植物';
+                const reminderType = this.getReminderTypeLabel(reminder.type);
+                return `${plantName} 需要${reminderType}了！`;
+            });
+
+            if (reminderMessages.length > 0) {
+                alert(`📢 养护提醒：\n${reminderMessages.join('\n')}`);
+            }
+        }
+    }
+
+    // 获取提醒类型的中文标签
+    getReminderTypeLabel(type) {
+        const labels = {
+            water: '浇水',
+            fertilize: '施肥',
+            repot: '换盆',
+            prune: '修剪'
+        };
+        return labels[type] || type;
     }
 
     // 绑定事件
     bindEvents() {
+        // 导出数据按钮事件
+        const exportBtn = document.getElementById('export-data-btn');
+        exportBtn.addEventListener('click', () => {
+            this.exportData();
+        });
+
+        // 导入数据按钮事件
+        const importBtn = document.getElementById('import-data-btn');
+        const importFileInput = document.getElementById('import-file-input');
+        
+        importBtn.addEventListener('click', () => {
+            importFileInput.click();
+        });
+
+        importFileInput.addEventListener('change', (e) => {
+            this.handleImportData(e);
+        });
+
         // 植物图片预览
         const imageInput = document.getElementById('plant-image');
         const imagePreview = document.getElementById('image-preview');
@@ -175,6 +305,12 @@ class PlantApp {
             if (e.target.classList.contains('modal')) {
                 e.target.style.display = 'none';
             }
+        });
+
+        // 养护提醒表单提交
+        document.getElementById('reminder-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleAddReminder(e);
         });
     }
 
@@ -408,9 +544,10 @@ class PlantApp {
                         '<p style="color: #718096; font-style: italic;">暂无养护记录</p>'
                     }
                 </div>
-                <div style="margin-top: 15px;">
+                <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px;">
                     <button class="btn btn-secondary add-care-btn" data-plant-id="${plant.id}">添加养护记录</button>
                     <button class="btn btn-primary edit-plant-btn" data-plant-id="${plant.id}">编辑信息</button>
+                    <button class="btn btn-warning set-reminder-btn" data-plant-id="${plant.id}">设置提醒</button>
                     <button class="btn btn-danger delete-plant-btn" data-plant-id="${plant.id}">删除植物</button>
                 </div>
             </div>
@@ -463,16 +600,105 @@ class PlantApp {
             });
         });
 
+        // 设置提醒按钮
+        document.querySelectorAll('.set-reminder-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const plantId = e.target.dataset.plantId;
+                this.openReminderModal(plantId);
+            });
+        });
+
         // 删除植物按钮
         document.querySelectorAll('.delete-plant-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const plantId = e.target.dataset.plantId;
-                if (confirm('确定要删除这株植物吗？相关的养护记录也会被删除。')) {
+                if (confirm('确定要删除这株植物吗？相关的养护记录和提醒也会被删除。')) {
                     this.storage.deletePlant(plantId);
                     this.renderPlants();
                 }
             });
         });
+    }
+
+    // 打开养护提醒模态框
+    openReminderModal(plantId) {
+        document.getElementById('reminder-plant-id').value = plantId;
+        
+        // 设置默认的下次提醒日期为明天
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        document.getElementById('reminder-next-date').value = tomorrow.toISOString().split('T')[0];
+        
+        document.getElementById('reminder-modal').style.display = 'block';
+    }
+
+    // 处理添加养护提醒
+    handleAddReminder(e) {
+        const form = e.target;
+        const formData = new FormData(form);
+        const reminder = {
+            plantId: formData.get('plantId'),
+            type: formData.get('type'),
+            interval: parseInt(formData.get('interval')),
+            nextDate: formData.get('nextDate')
+        };
+
+        this.storage.addReminder(reminder);
+        this.closeReminderModal();
+        this.renderPlants();
+    }
+
+    // 关闭养护提醒模态框
+    closeReminderModal() {
+        const modal = document.getElementById('reminder-modal');
+        const form = document.getElementById('reminder-form');
+        modal.style.display = 'none';
+        form.reset();
+    }
+
+    // 导出数据
+    exportData() {
+        const data = this.storage.exportAllData();
+        const dataStr = JSON.stringify(data, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `多肉养殖记录_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    // 处理数据导入
+    handleImportData(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.name.endsWith('.json')) {
+            alert('请选择JSON格式的文件');
+            return;
+        }
+
+        if (confirm('导入数据将覆盖当前所有数据，确定要继续吗？')) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    this.storage.importData(data);
+                    this.renderPlants();
+                    alert('数据导入成功！');
+                } catch (error) {
+                    alert('数据导入失败，请检查文件格式是否正确。');
+                    console.error('导入数据错误:', error);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // 重置文件输入
+        e.target.value = '';
     }
 }
 

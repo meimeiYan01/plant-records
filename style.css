@@ -180,6 +180,15 @@ section h2 {
     background-color: #f56565;
 }
 
+.btn-warning {
+    background-color: #f6e05e;
+    color: #2d3748;
+}
+
+.btn-warning:hover {
+    background-color: #ecc94b;
+}
+
 /* 植物卡片样式 */
 .plants-grid {
     display: grid;
